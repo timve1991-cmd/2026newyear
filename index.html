@@ -3,237 +3,219 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>活動任務追蹤助手 (8AM 重置版)</title>
+    <title>極簡任務儀表板</title>
     <style>
         :root {
-            --primary: #4a90e2;
-            --daily: #e3f2fd;
-            --weekly: #f3e5f5;
-            --once: #fff3e0;
-            --done: #c8e6c9;
+            --bg: #f0f2f5;
+            --card: #ffffff;
+            --daily: #3498db;
+            --weekly: #9b59b6;
+            --once: #e67e22;
+            --text: #2c3e50;
+            --done: #ebf5eb;
         }
-        body { font-family: "Microsoft JhengHei", sans-serif; background: #f4f7f6; color: #333; padding: 20px; line-height: 1.6; }
-        .container { max-width: 600px; margin: auto; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-        h1 { text-align: center; color: #2c3e50; margin-bottom: 5px; font-size: 1.5rem; }
-        .date-info { text-align: center; font-size: 0.9em; color: #666; margin-bottom: 5px; }
-        .reset-note { text-align: center; font-size: 0.8em; color: #e67e22; margin-bottom: 20px; font-weight: bold; }
-        .section { margin-bottom: 25px; border-left: 5px solid var(--primary); padding-left: 15px; }
-        .section-title { font-weight: bold; font-size: 1.1em; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
-        .task-item { display: flex; align-items: center; background: #fafafa; margin-bottom: 8px; padding: 12px; border-radius: 6px; cursor: pointer; transition: 0.2s; border: 1px solid #eee; }
-        .task-item:hover { background: #f0f0f0; }
-        .task-item.completed { background: var(--done); border-color: #a5d6a7; color: #666; }
+        * { box-sizing: border-box; }
+        body { font-family: -apple-system, "Noto Sans TC", sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 10px; font-size: 14px; }
+        
+        .dashboard { max-width: 1100px; margin: auto; }
+        header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 10px; padding: 0 5px; }
+        h1 { margin: 0; font-size: 1.2rem; display: flex; align-items: center; gap: 8px; }
+        .info-bar { text-align: right; font-size: 12px; color: #7f8c8d; }
+
+        /* 三欄佈局 */
+        .grid-container { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+        
+        .section { background: var(--card); border-radius: 8px; padding: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); display: flex; flex-direction: column; }
+        .section-header { border-bottom: 2px solid #eee; margin-bottom: 8px; padding-bottom: 5px; }
+        .title { font-weight: bold; font-size: 15px; display: flex; justify-content: space-between; }
+        .subtitle { font-size: 11px; color: #95a5a6; margin-top: 2px; }
+
+        /* 進度條迷你化 */
+        .prog-bg { background: #eee; height: 4px; border-radius: 2px; margin: 5px 0 10px 0; }
+        .prog-fill { height: 100%; border-radius: 2px; transition: 0.3s; width: 0%; }
+
+        /* 任務清單緊湊化 */
+        .task-list { flex-grow: 1; }
+        .task-item { display: flex; align-items: center; padding: 6px 8px; margin-bottom: 4px; border-radius: 4px; cursor: pointer; border: 1px solid transparent; background: #fdfdfd; }
+        .task-item:hover { background: #f5f5f5; }
+        .task-item.completed { background: var(--done); color: #95a5a6; }
         .task-item.completed span { text-decoration: line-through; }
-        input[type="checkbox"] { margin-right: 15px; transform: scale(1.3); pointer-events: none; }
-        .footer-btns { display: flex; gap: 10px; margin-top: 20px; }
-        button { flex: 1; padding: 12px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; transition: 0.3s; font-size: 1rem; }
-        .btn-save { background: var(--primary); color: white; }
-        .btn-history { background: #95a5a6; color: white; }
-        #history-panel { margin-top: 20px; display: none; border-top: 2px dashed #ddd; padding-top: 15px; }
-        .history-item { font-size: 0.85em; color: #555; border-bottom: 1px solid #eee; padding: 8px 0; display: flex; justify-content: space-between; }
-        .bi-weekly-note { font-size: 0.75em; color: #d35400; display: block; margin-top: 2px; }
-        .tag { font-size: 0.7em; padding: 2px 6px; border-radius: 4px; color: white; margin-left: 5px; }
+        input[type="checkbox"] { margin-right: 8px; pointer-events: none; }
+        .task-text { font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+        /* 歷史紀錄 */
+        .history-section { margin-top: 15px; background: #fff; border-radius: 8px; padding: 10px; }
+        details summary { cursor: pointer; font-weight: bold; color: #7f8c8d; }
+        .history-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 8px; margin-top: 10px; }
+        .history-card { font-size: 11px; padding: 5px; border-left: 3px solid #ccc; background: #f9f9f9; }
+
+        @media (max-width: 850px) {
+            .grid-container { grid-template-columns: 1fr; }
+            body { padding: 5px; }
+        }
     </style>
 </head>
 <body>
 
-<div class="container">
-    <h1>🎮 活動任務追蹤</h1>
-    <div class="date-info" id="current-date-display"></div>
-    <div class="reset-note">每日 08:00 AM 重置</div>
-    <div class="date-info" id="event-countdown" style="color: #e74c3c; font-weight: bold;"></div>
+<div class="dashboard">
+    <header>
+        <h1>🎮 任務助手 <span id="event-timer" style="color: #e74c3c; font-size: 12px;"></span></h1>
+        <div class="info-bar">
+            <div id="wall-clock"></div>
+            <div style="color: #e67e22; font-weight: bold;">08:00 AM 自動結算重置</div>
+        </div>
+    </header>
 
-    <div class="section" style="border-color: #2196F3;">
-        <div class="section-title">每日任務 <span class="tag" style="background:#2196F3;">DAILY</span></div>
-        <div id="daily-list"></div>
+    <div class="grid-container">
+        <div class="section" style="border-top: 4px solid var(--daily);">
+            <div class="section-header">
+                <div class="title" style="color: var(--daily);">每日任務 <span id="daily-count">0/0</span></div>
+                <div class="subtitle" id="daily-date">載入中...</div>
+            </div>
+            <div class="prog-bg"><div id="daily-bar" class="prog-fill" style="background: var(--daily);"></div></div>
+            <div id="daily-list" class="task-list"></div>
+        </div>
+
+        <div class="section" style="border-top: 4px solid var(--weekly);">
+            <div class="section-header">
+                <div class="title" style="color: var(--weekly);">每週任務 <span id="weekly-count">0/0</span></div>
+                <div class="subtitle" id="weekly-range">載入中...</div>
+            </div>
+            <div class="prog-bg"><div id="weekly-bar" class="prog-fill" style="background: var(--weekly);"></div></div>
+            <div id="weekly-list" class="task-list"></div>
+        </div>
+
+        <div class="section" style="border-top: 4px solid var(--once);">
+            <div class="section-header">
+                <div class="title" style="color: var(--once);">一次性任務 <span id="once-count">0/0</span></div>
+                <div class="subtitle">活動期間內完成即可</div>
+            </div>
+            <div class="prog-bg"><div id="once-bar" class="prog-fill" style="background: var(--once);"></div></div>
+            <div id="once-list" class="task-list"></div>
+        </div>
     </div>
 
-    <div class="section" style="border-color: #9c27b0;">
-        <div class="section-title">每週任務 <span class="tag" style="background:#9c27b0;">WEEKLY</span></div>
-        <div id="weekly-list"></div>
-    </div>
-
-    <div class="section" style="border-color: #ff9800;">
-        <div class="section-title">一次性任務 <span class="tag" style="background:#ff9800;">ONCE</span></div>
-        <div id="once-list"></div>
-    </div>
-
-    <div class="footer-btns">
-        <button class="btn-save" onclick="archiveToday()">手動結算存檔</button>
-        <button class="btn-history" onclick="toggleHistory()">檢視歷史紀錄</button>
-    </div>
-
-    <div id="history-panel">
-        <h3>最近 7 筆結算紀錄</h3>
-        <div id="history-content"></div>
+    <div class="history-section">
+        <details>
+            <summary>查看歷史結算 (自動保存最近 10 天)</summary>
+            <div id="history-content" class="history-grid"></div>
+        </details>
     </div>
 </div>
 
 <script>
-    // --- 配置區 ---
     const CONFIG = {
-        endDate: new Date('2026-03-26T08:00:00'), // 活動截止日
-        resetHour: 8, // 早上 8 點重置
+        endDate: new Date('2026-03-26T08:00:00'),
+        resetHour: 8,
         tasks: {
-            daily: [
-                "HAPPYDAY每日簽到*300隻", "春節氣息*15次", "GM露露-使用鞭炮進入打舞獅", "GM露露-收集福袋", "小薇安-今日運勢抽籤"
-            ],
-            weekly: [
-                "加加木馬士兵卡片 / 紅色寶珠", "GM露露-團圓飯 (三種各10)", "GM露露-春節組隊 (2週1憑證) *", "GM露露-躲避人馬", "小薇安-一馬當先", "江-天馬亂射"
-            ],
-            once: [
-                "長老斯坦 (弓箭手村)", "飯輪鐵男 (弓箭手村)", "阿勒米 (邱比特公園)", "GM露露-30垃圾堆"
-            ]
+            daily: ["HAPPYDAY簽到", "春節氣息*15", "舞獅打鼓", "收集福袋", "今日運勢"],
+            weekly: ["木馬士兵/紅寶珠", "團圓飯(10/10/10)", "春節組隊(2週1)*", "躲避人馬", "一馬當先", "天馬亂射"],
+            once: ["長老斯坦", "飯輪鐵男", "阿勒米", "30垃圾堆"]
         }
     };
 
-    // --- 核心邏輯 ---
-    let userData = JSON.parse(localStorage.getItem('gameTrackerData_v2')) || {
-        daily: {}, weekly: {}, once: {}, history: [], lastGameDate: ""
+    let userData = JSON.parse(localStorage.getItem('gameTracker_v3')) || {
+        daily: {}, weekly: {}, once: {}, history: [], lastGameDate: "", lastGameWeek: ""
     };
 
-    // 取得「遊戲日」字串 (現在時間減去8小時後的日期)
-    function getGameDateStr() {
-        const now = new Date();
-        const gameTime = new Date(now.getTime() - (CONFIG.resetHour * 60 * 60 * 1000));
-        return gameTime.toISOString().split('T')[0];
+    // 核心日期邏輯
+    function getGameTime() {
+        return new Date(new Date().getTime() - (CONFIG.resetHour * 60 * 60 * 1000));
     }
 
-    // 取得「遊戲週」字串 (用於每週四重置判定)
-    function getGameWeekStr() {
-        const now = new Date();
-        const gameTime = new Date(now.getTime() - (CONFIG.resetHour * 60 * 60 * 1000));
-        // 計算該日期所在的週四 (遊戲重置日)
+    function getGameDateStr(dateObj) {
+        const days = ['日', '一', '二', '三', '四', '五', '六'];
+        return `${dateObj.toISOString().split('T')[0]} (週${days[dateObj.getDay()]})`;
+    }
+
+    function getWeeklyRange() {
+        const gameTime = getGameTime();
         const day = gameTime.getDay();
-        const diff = (day < 4 ? -7 : 0) + 4 - day; 
-        const lastThursday = new Date(gameTime.getTime() + diff * 86400000);
-        return lastThursday.toISOString().split('T')[0];
+        const diffToThu = (day < 4 ? -7 : 0) + 4 - day;
+        const start = new Date(gameTime.getTime() + diffToThu * 86400000);
+        const end = new Date(start.getTime() + 6 * 86400000);
+        return `${start.getMonth()+1}/${start.getDate()} ~ ${end.getMonth()+1}/${end.getDate()} (週四重置)`;
     }
 
     function init() {
-        const currentGameDate = getGameDateStr();
-        const currentGameWeek = getGameWeekStr();
+        const nowGameTime = getGameTime();
+        const currentGameDate = nowGameTime.toISOString().split('T')[0];
+        const currentGameWeek = getWeeklyRange();
 
-        // 每日重置判定
-        if (userData.lastGameDate !== currentGameDate) {
-            userData.daily = {}; // 清空每日
-            userData.lastGameDate = currentGameDate;
+        // 【自動結算邏輯】日期變了，就自動把舊資料存入 history
+        if (userData.lastGameDate && userData.lastGameDate !== currentGameDate) {
+            autoArchive(userData.lastGameDate);
+            userData.daily = {}; // 重置每日
         }
-
-        // 每週重置判定 (如果上次記錄的週四跟這週的週四不同，就重置)
-        if (userData.lastGameWeek !== currentGameWeek) {
+        
+        // 每週重置
+        if (userData.lastGameWeek && userData.lastGameWeek !== currentGameWeek) {
             userData.weekly = {};
             userData.lastGameWeek = currentGameWeek;
         }
 
-        renderTasks();
-        updateUI();
+        userData.lastGameDate = currentGameDate;
+        userData.lastGameWeek = currentGameWeek;
+
+        render();
+        updateClocks();
         save();
     }
 
-    function renderTasks() {
-        const render = (items, type, containerId) => {
-            const container = document.getElementById(containerId);
+    function autoArchive(dateStr) {
+        const done = CONFIG.tasks.daily.filter((_, i) => userData.daily[i]).length;
+        const record = `📅 ${dateStr} ⮕ 完成 ${done}/${CONFIG.tasks.daily.length}`;
+        userData.history.unshift(record);
+        if (userData.history.length > 10) userData.history.pop();
+    }
+
+    function render() {
+        const types = ['daily', 'weekly', 'once'];
+        types.forEach(type => {
+            const items = CONFIG.tasks[type];
+            const container = document.getElementById(`${type}-list`);
+            const completedCount = items.filter((_, i) => userData[type][i]).length;
+            
+            // 更新計數與進度條
+            document.getElementById(`${type}-count`).innerText = `${completedCount}/${items.length}`;
+            document.getElementById(`${type}-bar`).style.width = `${(completedCount / items.length) * 100}%`;
+
             container.innerHTML = items.map((task, i) => `
                 <div class="task-item ${userData[type][i] ? 'completed' : ''}" onclick="toggleTask('${type}', ${i})">
                     <input type="checkbox" ${userData[type][i] ? 'checked' : ''}>
-                    <span>
-                        ${task}
-                        ${(type === 'weekly' && task.includes('*')) ? '<span class="bi-weekly-note">⚠️ 此任務每兩週最多換1憑證</span>' : ''}
-                    </span>
+                    <div class="task-text" title="${task}">${task}</div>
                 </div>
             `).join('');
-        };
+        });
 
-        render(CONFIG.tasks.daily, 'daily', 'daily-list');
-        render(CONFIG.tasks.weekly, 'weekly', 'weekly-list');
-        render(CONFIG.tasks.once, 'once', 'once-list');
+        document.getElementById('daily-date').innerText = getGameDateStr(getGameTime());
+        document.getElementById('weekly-range').innerText = getWeeklyRange();
+        document.getElementById('history-content').innerHTML = userData.history.map(h => `<div class="history-card">${h}</div>`).join('') || "尚無紀錄";
     }
 
     function toggleTask(type, index) {
         userData[type][index] = !userData[type][index];
         save();
-        renderTasks();
+        render();
     }
 
     function save() {
-        localStorage.setItem('gameTrackerData_v2', JSON.stringify(userData));
+        localStorage.setItem('gameTracker_v3', JSON.stringify(userData));
     }
 
-    function updateUI() {
+    function updateClocks() {
         const now = new Date();
-        document.getElementById('current-date-display').innerText = `現在時間：${now.toLocaleString('zh-TW')}`;
+        document.getElementById('wall-clock').innerText = `系統時間: ${now.toLocaleTimeString()}`;
         
         const diff = CONFIG.endDate - now;
         const days = Math.ceil(diff / (1000 * 60 * 60 * 24));
-        document.getElementById('event-countdown').innerText = days > 0 ? `距離 3/26 維護還有：${days} 天` : "活動已結束";
-    }
-
-    function archiveToday() {
-        const todayStr = getGameDateStr();
-        const dailyCount = CONFIG.tasks.daily.filter((_, i) => userData.daily[i]).length;
-        const record = `【${todayStr}】 完成度: ${dailyCount}/${CONFIG.tasks.daily.length}`;
-        
-        userData.history.unshift(record);
-        if (userData.history.length > 7) userData.history.pop();
-        
-        save();
-        alert("存檔成功！紀錄會保存在「檢視歷史紀錄」中。");
-        renderHistory();
-    }
-
-    function toggleHistory() {
-        const panel = document.getElementById('history-panel');
-        panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
-        renderHistory();
-    }
-
-    function renderHistory() {
-        const container = document.getElementById('history-content');
-        container.innerHTML = userData.history.map(h => `<div class="history-item">${h}</div>`).join('') || "尚無結算紀錄";
+        document.getElementById('event-timer').innerText = days > 0 ? `(剩 ${days} 天結束)` : "(活動結束)";
     }
 
     init();
-    // 每一分鐘更新一次時間 UI
-    setInterval(updateUI, 60000);
-</script>
-
-<!-- Code injected by live-server -->
-<script>
-	// <![CDATA[  <-- For SVG support
-	if ('WebSocket' in window) {
-		(function () {
-			function refreshCSS() {
-				var sheets = [].slice.call(document.getElementsByTagName("link"));
-				var head = document.getElementsByTagName("head")[0];
-				for (var i = 0; i < sheets.length; ++i) {
-					var elem = sheets[i];
-					var parent = elem.parentElement || head;
-					parent.removeChild(elem);
-					var rel = elem.rel;
-					if (elem.href && typeof rel != "string" || rel.length == 0 || rel.toLowerCase() == "stylesheet") {
-						var url = elem.href.replace(/(&|\?)_cacheOverride=\d+/, '');
-						elem.href = url + (url.indexOf('?') >= 0 ? '&' : '?') + '_cacheOverride=' + (new Date().valueOf());
-					}
-					parent.appendChild(elem);
-				}
-			}
-			var protocol = window.location.protocol === 'http:' ? 'ws://' : 'wss://';
-			var address = protocol + window.location.host + window.location.pathname + '/ws';
-			var socket = new WebSocket(address);
-			socket.onmessage = function (msg) {
-				if (msg.data == 'reload') window.location.reload();
-				else if (msg.data == 'refreshcss') refreshCSS();
-			};
-			if (sessionStorage && !sessionStorage.getItem('IsThisFirstTime_Log_From_LiveServer')) {
-				console.log('Live reload enabled.');
-				sessionStorage.setItem('IsThisFirstTime_Log_From_LiveServer', true);
-			}
-		})();
-	}
-	else {
-		console.error('Upgrade your browser. This Browser is NOT supported WebSocket for Live-Reloading.');
-	}
-	// ]]>
+    setInterval(updateClocks, 1000);
+    // 每 10 分鐘檢查一次是否跨日需要自動重置
+    setInterval(init, 600000);
 </script>
 </body>
 </html>
